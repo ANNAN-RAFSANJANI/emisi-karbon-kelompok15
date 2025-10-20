@@ -386,7 +386,7 @@ if mode == "Prediksi Per Negara":
         # NEW: Yearly Global Emission Charts
         # =========================
         st.markdown("---")
-        st.markdown("### 📊 Analisis Emisi Global Per Tahun")
+        st.markdown("### Analisis Emisi Global Per Tahun")
         
         # Load historical data
         hist_sheet = pd.read_excel(EXCEL_FILE, sheet_name=selected_model).dropna()
@@ -451,7 +451,7 @@ if mode == "Prediksi Per Negara":
         # STATISTIK PREDIKSI
         # =========================
         st.markdown("---")
-        st.markdown("### 📈 Statistik Hasil Prediksi")
+        st.markdown("### Statistik Hasil Prediksi")
         
         col_stat1, col_stat2, col_stat3 = st.columns(3)
         
@@ -483,7 +483,7 @@ if mode == "Prediksi Per Negara":
             )
         
         # Tren Prediksi
-        st.markdown("#### 📊 Ringkasan Tren Prediksi")
+        st.markdown("#### Ringkasan Tren Prediksi")
         col_trend1, col_trend2 = st.columns(2)
         
         with col_trend1:
@@ -513,7 +513,7 @@ if mode == "Prediksi Per Negara":
 
         # Time series for a selected country
         st.markdown("---")
-        st.markdown("### 🏳️ Analisis Per Negara")
+        st.markdown("### Analisis Per Negara")
         chosen_country = st.selectbox("Pilih Negara untuk Time Series", countries)
         hist = pd.read_excel(EXCEL_FILE, sheet_name=selected_model).dropna()
         ser_hist = hist[chosen_country].values
@@ -581,7 +581,7 @@ else:  # Compare Models
         # =========================
         # GLOBAL COMPARISON
         # =========================
-        st.markdown("### 🌍 Perbandingan Emisi Global")
+        st.markdown("### Perbandingan Emisi Global")
         st.markdown("Analisis total emisi global dari semua model")
         
         # Prepare global comparison data
@@ -672,7 +672,7 @@ else:  # Compare Models
         st.plotly_chart(fig_global, use_container_width=True)
         
         # Statistics comparison table
-        st.markdown("#### 📊 Statistik Perbandingan Model (Prediksi)")
+        st.markdown("#### Statistik Perbandingan Model (Prediksi)")
         
         stats_data = []
         for model_name, df_future in st.session_state["df_future_all"].items():
@@ -694,7 +694,7 @@ else:  # Compare Models
         st.dataframe(df_stats, use_container_width=True, hide_index=True)
         
         # Box plot comparison
-        st.markdown("#### 📦 Distribusi Prediksi Model")
+        st.markdown("#### Distribusi Prediksi Model")
         
         box_data = []
         for model_name, df_future in st.session_state["df_future_all"].items():
@@ -732,7 +732,7 @@ else:  # Compare Models
         # =========================
         # PER COUNTRY COMPARISON
         # =========================
-        st.markdown("### 🏳️ Perbandingan Per Negara")
+        st.markdown("### Perbandingan Per Negara")
         chosen_countries = st.multiselect("Pilih Negara untuk Perbandingan", countries, default=countries[:1])
         
         if chosen_countries:
