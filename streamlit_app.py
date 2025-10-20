@@ -578,24 +578,209 @@ else:  # Compare Models
             st.success("All models predicted successfully")
 
     if "df_future_all" in st.session_state and st.session_state["df_future_all"]:
-        chosen_countries = st.multiselect("Pilih Negara untuk Perbandingan", countries, default=countries[:1])
-        fig_comp = px.line(title="Perbandingan Model")
+        # =========================
+        # GLOBAL COMPARISON
+        # =========================
+        st.markdown("### 🌍 Perbandingan Emisi Global")
+        st.markdown("Analisis total emisi global dari semua model")
+        
+        # Prepare global comparison data
+        global_comparison_data = []
+        model_colors = {
+            "BLUE": "#00E3CC",
+            "H&C2023": "#FF6B9D",
+            "OSCAR": "#FFA07A",
+            "LUCE": "#9370DB"
+        }
+        
         for model_name, df_future in st.session_state["df_future_all"].items():
+            # Historical data
             hist = pd.read_excel(EXCEL_FILE, sheet_name=model_name).dropna()
             years_hist_local = hist.iloc[:, 0].values
-            for country in chosen_countries:
-                ser_hist = hist[country].values
-                ser_pred = df_future[country].values
-                ser_pred_smooth = smooth_prediction(ser_hist, ser_pred, steps=smooth_val)
-                years_pred_local = df_future["Year"].values
-                fig_comp.add_scatter(
-                    x=np.concatenate([years_hist_local, years_pred_local]),
-                    y=np.concatenate([ser_hist, ser_pred_smooth]),
-                    mode="lines",
-                    name=f"{model_name} — {country}"
-                )
-        fig_comp.update_layout(template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)")
-        st.plotly_chart(fig_comp, use_container_width=True)
+            total_hist = hist.iloc[:, 1:].sum(axis=1).values
+            
+            # Predicted data
+            total_pred = df_future.iloc[:, 1:].sum(axis=1).values
+            total_pred_smooth = smooth_prediction(total_hist, total_pred, steps=smooth_val)
+            years_pred_local = df_future["Year"].values
+            
+            # Combine
+            for y, v in zip(years_hist_local, total_hist):
+                global_comparison_data.append({
+                    "Year": y,
+                    "Total Emissions": v,
+                    "Model": model_name,
+                    "Type": "Historical"
+                })
+            for y, v in zip(years_pred_local, total_pred_smooth):
+                global_comparison_data.append({
+                    "Year": y,
+                    "Total Emissions": v,
+                    "Model": model_name,
+                    "Type": "Predicted"
+                })
+        
+        df_global_comp = pd.DataFrame(global_comparison_data)
+        
+        # Chart: Global Emissions Comparison
+        fig_global = go.Figure()
+        
+        for model_name in PICKLES.keys():
+            model_data = df_global_comp[df_global_comp["Model"] == model_name]
+            hist_data = model_data[model_data["Type"] == "Historical"]
+            pred_data = model_data[model_data["Type"] == "Predicted"]
+            
+            # Historical line
+            fig_global.add_trace(go.Scatter(
+                x=hist_data["Year"],
+                y=hist_data["Total Emissions"],
+                mode='lines',
+                name=f'{model_name} (Historical)',
+                line=dict(color=model_colors.get(model_name, "#CCCCCC"), width=2),
+                showlegend=True
+            ))
+            
+            # Predicted line
+            fig_global.add_trace(go.Scatter(
+                x=pred_data["Year"],
+                y=pred_data["Total Emissions"],
+                mode='lines',
+                name=f'{model_name} (Predicted)',
+                line=dict(color=model_colors.get(model_name, "#CCCCCC"), width=2, dash='dash'),
+                showlegend=True
+            ))
+        
+        fig_global.update_layout(
+            title="Perbandingan Total Emisi Global — Semua Model",
+            xaxis_title="Tahun",
+            yaxis_title="Total Emisi Global",
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            hovermode='x unified',
+            height=500,
+            legend=dict(
+                orientation="v",
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                bgcolor="rgba(0,0,0,0.5)"
+            )
+        )
+        
+        st.plotly_chart(fig_global, use_container_width=True)
+        
+        # Statistics comparison table
+        st.markdown("#### 📊 Statistik Perbandingan Model (Prediksi)")
+        
+        stats_data = []
+        for model_name, df_future in st.session_state["df_future_all"].items():
+            hist = pd.read_excel(EXCEL_FILE, sheet_name=model_name).dropna()
+            total_hist = hist.iloc[:, 1:].sum(axis=1).values
+            total_pred = df_future.iloc[:, 1:].sum(axis=1).values
+            total_pred_smooth = smooth_prediction(total_hist, total_pred, steps=smooth_val)
+            
+            stats_data.append({
+                "Model": model_name,
+                "Rata-rata": f"{np.mean(total_pred_smooth):,.2f}",
+                "Maksimum": f"{np.max(total_pred_smooth):,.2f}",
+                "Minimum": f"{np.min(total_pred_smooth):,.2f}",
+                "Total Kumulatif": f"{np.sum(total_pred_smooth):,.2f}",
+                "Perubahan (%)": f"{((total_pred_smooth[-1] - total_pred_smooth[0]) / total_pred_smooth[0] * 100):+.2f}%"
+            })
+        
+        df_stats = pd.DataFrame(stats_data)
+        st.dataframe(df_stats, use_container_width=True, hide_index=True)
+        
+        # Box plot comparison
+        st.markdown("#### 📦 Distribusi Prediksi Model")
+        
+        box_data = []
+        for model_name, df_future in st.session_state["df_future_all"].items():
+            hist = pd.read_excel(EXCEL_FILE, sheet_name=model_name).dropna()
+            total_hist = hist.iloc[:, 1:].sum(axis=1).values
+            total_pred = df_future.iloc[:, 1:].sum(axis=1).values
+            total_pred_smooth = smooth_prediction(total_hist, total_pred, steps=smooth_val)
+            
+            for val in total_pred_smooth:
+                box_data.append({
+                    "Model": model_name,
+                    "Emisi": val
+                })
+        
+        df_box = pd.DataFrame(box_data)
+        fig_box = px.box(
+            df_box,
+            x="Model",
+            y="Emisi",
+            color="Model",
+            color_discrete_map=model_colors,
+            title="Distribusi Emisi Global — Perbandingan Model"
+        )
+        fig_box.update_layout(
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            showlegend=False,
+            height=400
+        )
+        st.plotly_chart(fig_box, use_container_width=True)
+        
+        st.markdown("---")
+        
+        # =========================
+        # PER COUNTRY COMPARISON
+        # =========================
+        st.markdown("### 🏳️ Perbandingan Per Negara")
+        chosen_countries = st.multiselect("Pilih Negara untuk Perbandingan", countries, default=countries[:1])
+        
+        if chosen_countries:
+            fig_comp = go.Figure()
+            
+            for model_name, df_future in st.session_state["df_future_all"].items():
+                hist = pd.read_excel(EXCEL_FILE, sheet_name=model_name).dropna()
+                years_hist_local = hist.iloc[:, 0].values
+                
+                for country in chosen_countries:
+                    ser_hist = hist[country].values
+                    ser_pred = df_future[country].values
+                    ser_pred_smooth = smooth_prediction(ser_hist, ser_pred, steps=smooth_val)
+                    years_pred_local = df_future["Year"].values
+                    
+                    # Historical
+                    fig_comp.add_trace(go.Scatter(
+                        x=years_hist_local,
+                        y=ser_hist,
+                        mode="lines",
+                        name=f"{model_name} — {country} (Hist)",
+                        line=dict(width=2),
+                        showlegend=True
+                    ))
+                    
+                    # Predicted
+                    fig_comp.add_trace(go.Scatter(
+                        x=years_pred_local,
+                        y=ser_pred_smooth,
+                        mode="lines",
+                        name=f"{model_name} — {country} (Pred)",
+                        line=dict(width=2, dash='dash'),
+                        showlegend=True
+                    ))
+            
+            fig_comp.update_layout(
+                title="Perbandingan Emisi Per Negara — Semua Model",
+                xaxis_title="Tahun",
+                yaxis_title="Emisi",
+                template="plotly_dark",
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                hovermode='x unified',
+                height=500
+            )
+            st.plotly_chart(fig_comp, use_container_width=True)
+        else:
+            st.info("Pilih minimal satu negara untuk melihat perbandingan")
     else:
         st.info("Belum ada data perbandingan. Tekan 'Jalankan Semua Prediksi' untuk menjalankan semua model.")
 
